@@ -1,0 +1,10 @@
+# Ignorar ambiente virtual
+venv/
+__pycache__/
+*.pyc
+
+# Ignorar arquivos de configuração do VSCode
+.vscode/
+
+# Ignorar arquivos do sistema operacional (como o Thumbs.db no Windows)
+Thumbs.db
