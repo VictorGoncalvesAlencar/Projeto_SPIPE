@@ -13,7 +13,7 @@ RABBITMQ_HOST = 'localhost'
 QUEUE_NAME = 'image_queue'
 
 # Configuração de workers dinâmicos
-MAX_WORKERS = 5  # Número máximo de workers simultâneos
+MAX_WORKERS = 4  # Número máximo de workers simultâneos
 MIN_WORKERS = 1  # Número mínimo de workers ativos
 IDLE_TIMEOUT = 30  # Tempo máximo de inatividade antes de desligar um worker
 TASK_THRESHOLD = 20  # Número de tarefas na fila antes de aumentar os workers

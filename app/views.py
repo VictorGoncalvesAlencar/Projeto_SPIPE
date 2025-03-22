@@ -1,34 +1,20 @@
+# views.py
+
 import os
+import uuid
 import json
 import pika
-import uuid
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+from flask import request, jsonify, send_from_directory
+from config import UPLOAD_FOLDER, RABBITMQ_HOST, QUEUE_NAME
 
-# Configurações
-UPLOAD_FOLDER = "Upload"
-RABBITMQ_HOST = "localhost"
-QUEUE_NAME = "image_queue"
-
-# Cria a pasta de upload, se não existir
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Armazenamento dos resultados (em memória, para este exemplo)
+# Armazenamento dos resultados
 results = {}  # Estrutura: { filename: resultado_processado }
 
-# Configurar Flask
-app = Flask(__name__)
-CORS(app)
-
-# ----------------------
 # Rota para servir a interface web (index.html)
-@app.route("/")
 def home():
     return send_from_directory("static", "index.html")  # Busca na pasta "static/"
 
-# ----------------------
 # Rota para receber o upload da imagem
-@app.route("/upload", methods=["POST"])
 def upload_file():
     if "file" not in request.files:
         return jsonify({"error": "Nenhum arquivo enviado"}), 400
@@ -66,9 +52,7 @@ def upload_file():
     # Retorna o nome único gerado ao cliente
     return jsonify({"message": "Arquivo enviado com sucesso", "filename": unique_filename}), 200
 
-# ----------------------
 # Rota callback para receber o resultado do processamento do worker
-@app.route("/result_callback", methods=["POST"])
 def result_callback():
     try:
         data = request.get_json()
@@ -84,9 +68,7 @@ def result_callback():
     except Exception as e:
         return jsonify({"error": f"Erro ao processar resultado: {str(e)}"}), 500
 
-# ----------------------
 # Rota para que o cliente obtenha o resultado do processamento
-@app.route("/get_result", methods=["GET"])
 def get_result():
     filename = request.args.get("filename")
     
@@ -108,7 +90,3 @@ def get_result():
         return jsonify({"result": result}), 200
     else:
         return jsonify({"message": "Processamento em andamento ou não encontrado."}), 202
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
