@@ -39,4 +39,3 @@ def manage_workers():
                     print(f"[Monitor] Worker ocioso encerrado. Total: {len(workers)}")
                     break
 
-        time.sleep(3)

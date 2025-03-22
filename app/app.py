@@ -10,7 +10,10 @@ app = Flask(__name__)
 CORS(app)
 
 # Configurar as rotas
-app.add_url_rule("/static", "home", home)
+@app.route("/", methods=["GET"])
+def home_route():
+    return home()
+
 app.add_url_rule("/upload", "upload_file", upload_file, methods=["POST"])
 app.add_url_rule("/result_callback", "result_callback", result_callback, methods=["POST"])
 app.add_url_rule("/get_result", "get_result", get_result, methods=["GET"])

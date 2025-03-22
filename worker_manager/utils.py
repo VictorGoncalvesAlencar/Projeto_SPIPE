@@ -1,4 +1,8 @@
 import pika
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from app.config import RABBITMQ_HOST, QUEUE_NAME
 
 def get_queue_size():
