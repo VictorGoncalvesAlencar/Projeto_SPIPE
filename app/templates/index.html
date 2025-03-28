@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload de Imagem</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7fc;
+            color: #333;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .upload-container {
+            margin: 30px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            width: 50%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        input[type="file"] {
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .status-block {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .status-block p {
+            font-size: 16px;
+        }
+        .status-block.success {
+            background-color: #dff0d8;
+            color: #3c763d;
+            text-align: center;
+        }
+        .status-block.loading {
+            background-color: #f2dede;
+            color: #a94442;
+            text-align: center;
+        }
+        .status-block.result {
+            background-color: #d9edf7;
+            color: #31708f;
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #4CAF50;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Upload de Imagem para Processamento de Placa</h1>
+    </header>
+
+    <div class="upload-container">
+        <form id="uploadForm" enctype="multipart/form-data">
+            <input type="file" name="file" id="fileInput" required>
+            <button type="submit">Enviar Imagem</button>
+        </form>
+    </div>
+
+    <div id="statusContainer"></div>
+
+    <script>
+        // Função para fazer o upload da imagem e buscar o resultado do processamento
+        document.getElementById("uploadForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            const fileInput = document.getElementById("fileInput");
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            // Exibe a animação de carregamento enquanto o upload ocorre
+            const statusContainer = document.getElementById("statusContainer");
+            statusContainer.innerHTML = `
+                <div class="status-block loading">
+                    <div class="loader"></div>
+                    <p>Enviando arquivo... Aguarde, estamos processando.</p>
+                </div>
+            `;
+
+            // Envia a imagem para o endpoint /upload do servidor Flask
+            fetch("http://127.0.0.1:5000/upload", {  // Use o IP público da instância
+                method: "POST",
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    statusContainer.innerHTML = `
+                        <div class="status-block loading">
+                            <p style="color: red;">Erro: ${data.error}</p>
+                        </div>
+                    `;
+                } else {
+                    statusContainer.innerHTML = `
+                        <div class="status-block success">
+                            <p>Arquivo enviado com sucesso! Processando...</p>
+                        </div>
+                    `;
+                    
+                    // Após enviar, inicie uma consulta periódica para obter o resultado
+                    const filename = data.filename;
+                    const intervalID = setInterval(() => {
+                        fetch(`http://127.0.0.1:5000/get_result?filename=${filename}`)
+                        .then(response => response.json())
+                        .then(resultData => {
+                            if (resultData.result) {
+                                // Exibe o código da placa de forma destacada
+                                statusContainer.innerHTML = `
+                                    <div class="status-block result">
+                                        <p>${resultData.result}</p>
+                                    </div>
+                                `;
+                                clearInterval(intervalID);
+                            } else {
+                                console.log("Processamento em andamento...");
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Erro ao buscar resultado:", error);
+                        });
+                    }, 2000); // Consulta a cada 2 segundos
+                }
+            })
+            .catch(error => {
+                statusContainer.innerHTML = `
+                    <div class="status-block loading">
+                        <p style="color: red;">Erro ao enviar o arquivo: ${error}</p>
+                    </div>
+                `;
+            });
+        });
+    </script>
+
+</body>
+</html>

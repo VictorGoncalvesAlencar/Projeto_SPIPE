@@ -8,7 +8,7 @@ import easyocr
 from app.config import  RABBITMQ_HOST, QUEUE_NAME
 
 
-reader = easyocr.Reader(["en", "pt"])  # Inicializa o OCR
+reader = easyocr.Reader(["en", "pt"], gpu=False)  # Inicializa o OCR
 
 def extract_plate_text(image_path):
     """Extrai o texto da placa do veículo."""

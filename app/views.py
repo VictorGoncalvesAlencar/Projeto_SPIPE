@@ -12,7 +12,7 @@ results = {}  # Estrutura: { filename: resultado_processado }
 
 # Rota para servir a interface web (index.html)
 def home():
-    return send_from_directory("static", "index.html")
+    return send_from_directory("templates", "index.html")
 
 # Rota para receber o upload da imagem
 def upload_file():

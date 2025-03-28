@@ -1,5 +1,10 @@
-from monitor import manage_workers
+# worker_maneger.py
 
+from monitor import manage_workers, create_initial_workers
+
+# Chamar a função create_initial_workers no seu código principal antes de monitorar
 if __name__ == "__main__":
-    print("[Gerenciador] Iniciando monitoramento de workers...")
-    manage_workers()
+    print("[Monitor] Iniciando gerenciamento de workers...")
+    create_initial_workers()  # Criar os trabalhadores iniciais
+    manage_workers()  # Iniciar o gerenciamento dinâmico de workers
+
