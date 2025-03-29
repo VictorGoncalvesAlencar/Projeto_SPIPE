@@ -4,8 +4,12 @@ import os
 import uuid
 import json
 import pika
+from threading import Thread
 from flask import request, jsonify, send_from_directory
 from config import UPLOAD_FOLDER, RABBITMQ_HOST, QUEUE_NAME
+
+
+RESULT_QUEUE = "result_queue"
 
 # Armazenamento dos resultados
 results = {}  # Estrutura: { filename: resultado_processado }
@@ -90,3 +94,21 @@ def get_result():
         return jsonify({"result": result}), 200
     else:
         return jsonify({"message": "Processamento em andamento ou não encontrado."}), 202
+
+def consume_results():
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+    channel = connection.channel()
+    channel.queue_declare(queue=RESULT_QUEUE, durable=True)
+
+    def callback(ch, method, properties, body):
+        data = json.loads(body)
+        filename = data["filename"]
+        result = data["result"]
+        results[filename] = result
+        print(f"[Flask] Resultado recebido e armazenado para {filename}")
+
+        ch.basic_ack(delivery_tag=method.delivery_tag)  # Confirma a mensagem
+
+    channel.basic_consume(queue=RESULT_QUEUE, on_message_callback=callback)
+    print("[Flask] Consumidor de resultados iniciado...")
+    channel.start_consuming()
