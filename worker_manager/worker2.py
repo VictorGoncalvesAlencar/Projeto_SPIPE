@@ -22,7 +22,7 @@ channel = connection.channel()
 channel.queue_declare(queue="result_queue")
 
 def process_task(worker_id, ch, method, properties, body):
-    """Processa a imagem e extrai a placa."""
+    # Processa a imagem e extrai a placa
     
     task = json.loads(body)
     filename = task["filename"]
@@ -32,7 +32,7 @@ def process_task(worker_id, ch, method, properties, body):
     plate_text = extract_plate_text(image_path)
     result = plate_text # if plate_text else "Placa não identificada"
 
-    # Envia resultado para RabbitMQ (usando a conexão global)
+    # Envia resultado para RabbitMQ
     channel.basic_publish(
         exchange="",
         routing_key="result_queue",
@@ -51,7 +51,7 @@ def process_task(worker_id, ch, method, properties, body):
 
 
 def worker(worker_id):
-    """Worker que consome tarefas da fila RabbitMQ."""
+    # Worker que consome tarefas da fila RabbitMQ
     
     local_connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
     local_channel = local_connection.channel()
@@ -62,7 +62,7 @@ def worker(worker_id):
     local_channel.start_consuming()
 
 def extract_plate_text(image_path):
-    """Processa a imagem e extrai o texto da placa."""
+    # Processa a imagem e extrai o texto da placa
     
     if not os.path.exists(image_path):
         print(f"Erro: Arquivo não encontrado - {image_path}")
@@ -82,8 +82,8 @@ def extract_plate_text(image_path):
 
     # OCR com Tesseract
     text = pytesseract.image_to_string(gray, config="--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789").strip()
-    text = re.sub(r'\s+', '', text)  # Remove espaços extras
-    text = text.upper()  # Normaliza para letras maiúsculas
+    text = re.sub(r'\s+', '', text) 
+    text = text.upper()  
 
     # Validação com regex
     match = re.search(PLATE_PATTERN, text)

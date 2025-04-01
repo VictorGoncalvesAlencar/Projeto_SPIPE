@@ -21,7 +21,7 @@ channel = connection.channel()
 channel.queue_declare(queue="result_queue")
 
 def process_task(worker_id, status_dict, ch, method, properties, body):
-    """Processa uma imagem e atualiza a atividade do worker."""
+    # Processa uma imagem e atualiza a atividade do worker.
     
     task = json.loads(body)
     filename = task["filename"]
@@ -54,7 +54,7 @@ def process_task(worker_id, status_dict, ch, method, properties, body):
 
 
 def worker(worker_id, status_dict):
-    """Worker que consome tarefas e atualiza sua atividade."""
+    # Worker que consome tarefas e atualiza sua atividade
     
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
     channel = connection.channel()
@@ -70,7 +70,7 @@ def worker(worker_id, status_dict):
 
 
 def extract_plate_text(image_path):
-    """Processa a imagem e extrai o texto da placa."""
+    #Processa a imagem e extrai o texto da placa
     
     if not os.path.exists(image_path):
         print(f"Erro: Arquivo não encontrado - {image_path}")
@@ -90,8 +90,8 @@ def extract_plate_text(image_path):
 
     # OCR com Tesseract
     text = pytesseract.image_to_string(gray, config="--oem 3 --psm 6 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789").strip()
-    text = re.sub(r'\s+', '', text)  # Remove espaços extras
-    text = text.upper()  # Normaliza para letras maiúsculas
+    text = re.sub(r'\s+', '', text) 
+    text = text.upper()
 
     # Validação com regex
     match = re.search(PLATE_PATTERN, text)

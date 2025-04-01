@@ -13,22 +13,22 @@ workers = []
 worker_id_counter = 1  
 
 def create_initial_workers(status_dict):
-    """Cria os workers iniciais."""
+    # Cria os workers iniciais
     global worker_id_counter
     for _ in range(MIN_WORKERS):
         print(f"[Monitor] Criando worker inicial: {worker_id_counter}")
         p = multiprocessing.Process(target=worker, args=(f"Worker{worker_id_counter}", status_dict))
         p.start()
-        workers.append((worker_id_counter, p))  # Guardamos ID e processo
+        workers.append((worker_id_counter, p))
         worker_id_counter += 1
     print(f"[Monitor] Workers iniciais criados. Total de workers: {len(workers)}")
 
 def manage_workers():
-    """Gerencia dinamicamente os workers."""
+    # Gerencia dinamicamente os workers
     global workers, worker_id_counter
 
     with multiprocessing.Manager() as manager:
-        status_dict = manager.dict()  # Criamos um dicionário compartilhado
+        status_dict = manager.dict()  
         create_initial_workers(status_dict)
 
         while True:
@@ -37,7 +37,7 @@ def manage_workers():
 
             print(f"[Monitor] Tamanho da fila: {queue_size}, Workers ativos: {current_workers}")
 
-            # ESCALONAMENTO (Criar mais workers se necessário)
+            # ESCALONAMENTO 
             if queue_size > QUEUE_THRESHOLD and current_workers < MAX_WORKERS:
                 print(f"[Monitor] Criando novo worker: {worker_id_counter}")
                 p = multiprocessing.Process(target=worker, args=(f"Worker{worker_id_counter}", status_dict))
@@ -45,11 +45,11 @@ def manage_workers():
                 workers.append((worker_id_counter, p))
                 worker_id_counter += 1
 
-            # REDUÇÃO (Encerrar workers ociosos)
+            # REDUÇÃO 
             elif queue_size < QUEUE_THRESHOLD and current_workers > MIN_WORKERS:
                 now = time.time()
                 for worker_id, p in workers:
-                    last_activity = status_dict.get(worker_id, 0)  # Obtém última atividade
+                    last_activity = status_dict.get(worker_id, 0)  
                     if now - last_activity > IDLE_TIMEOUT:
                         print(f"[Monitor] Encerrando worker ocioso: {worker_id}")
                         p.terminate()  

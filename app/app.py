@@ -18,8 +18,6 @@ app.add_url_rule("/upload", "upload_file", upload_file, methods=["POST"])
 app.add_url_rule("/result_callback", "result_callback", result_callback, methods=["POST"])
 app.add_url_rule("/get_result", "get_result", get_result, methods=["GET"])
 
-
-# Inicia o consumidor de resultados em uma thread separada
 def start_consuming():
     thread = Thread(target=consume_results, daemon=True)
     thread.start()

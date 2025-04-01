@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from app.config import RABBITMQ_HOST, QUEUE_NAME
 
 def get_queue_size():
-    """Verifica o número de mensagens pendentes na fila."""
+    # Verifica o número de mensagens pendentes na fila
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
     channel = connection.channel()
     

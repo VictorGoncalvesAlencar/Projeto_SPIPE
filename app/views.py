@@ -6,15 +6,12 @@ import json
 import pika
 from threading import Thread
 from flask import request, jsonify, send_from_directory
-from config import UPLOAD_FOLDER, RABBITMQ_HOST, QUEUE_NAME
-
-
-RESULT_QUEUE = "result_queue"
+from config import UPLOAD_FOLDER, RABBITMQ_HOST, QUEUE_NAME, RESULT_QUEUE
 
 # Armazenamento dos resultados
-results = {}  # Estrutura: { filename: resultado_processado }
+results = {}  
 
-# Rota para servir a interface web (index.html)
+# Rota interface web
 def home():
     return send_from_directory("templates", "index.html")
 
@@ -42,7 +39,7 @@ def upload_file():
     })
 
     try:
-        # Abre e fecha conexão corretamente para evitar conexões quebradas
+        # Abre e fecha conexão 
         connection = pika.BlockingConnection(pika.ConnectionParameters(
             host=RABBITMQ_HOST, heartbeat=600, blocked_connection_timeout=300
         ))
@@ -81,12 +78,12 @@ def get_result():
 
     if filename in results:
         # Recupera o resultado
-        result = results.pop(filename)  # Remove do dicionário para liberar memória
+        result = results.pop(filename)  
 
         # Caminho completo da imagem
         image_path = os.path.join(UPLOAD_FOLDER, filename)
 
-        # Exclui a imagem do servidor após o cliente receber o resultado
+        # Exclui a imagem do servidor 
         if os.path.exists(image_path):
             os.remove(image_path)
             print(f"[Flask] Imagem {filename} excluída após cliente obter o resultado.")
@@ -107,7 +104,7 @@ def consume_results():
         results[filename] = result
         print(f"[Flask] Resultado recebido e armazenado para {filename}")
 
-        ch.basic_ack(delivery_tag=method.delivery_tag)  # Confirma a mensagem
+        ch.basic_ack(delivery_tag=method.delivery_tag) 
 
     channel.basic_consume(queue=RESULT_QUEUE, on_message_callback=callback)
     print("[Flask] Consumidor de resultados iniciado...")

@@ -8,10 +8,10 @@ import easyocr
 from app.config import  RABBITMQ_HOST, QUEUE_NAME
 
 
-reader = easyocr.Reader(["en", "pt"], gpu=False)  # Inicializa o OCR
+reader = easyocr.Reader(["en", "pt"], gpu=False)  
 
 def extract_plate_text(image_path):
-    """Extrai o texto da placa do veículo."""
+    # Extrai o texto da placa do veículo
     image = cv2.imread(image_path)
     if image is None:
         print(f"Erro ao carregar a imagem: {image_path}")
@@ -29,7 +29,7 @@ def extract_plate_text(image_path):
     return None  
 
 def process_task(worker_id, ch, method, properties, body):
-    """Processa a imagem e extrai a placa."""
+    # Processa a imagem e extrai a placa
     task = json.loads(body)
     filename = task["filename"]
     image_path = os.path.join("Upload", filename)
@@ -57,7 +57,7 @@ def process_task(worker_id, ch, method, properties, body):
     requests.post("http://localhost:5000/result_callback", json=payload)
 
 def worker(worker_id):
-    """Worker que consome tarefas da fila RabbitMQ."""
+    #Worker que consome tarefas da fila RabbitMQ
     connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
     channel = connection.channel()
     channel.basic_qos(prefetch_count=1)
