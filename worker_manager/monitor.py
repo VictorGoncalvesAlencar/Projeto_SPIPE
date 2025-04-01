@@ -1,10 +1,9 @@
-# monitor.py
 import time
 import multiprocessing
 from utils import get_queue_size
 from worker2 import worker
 
-MAX_WORKERS = 4  
+MAX_WORKERS = 2   
 MIN_WORKERS = 1  
 IDLE_TIMEOUT = 30  
 QUEUE_THRESHOLD = 10  
@@ -13,63 +12,65 @@ CHECK_INTERVAL = 10
 workers = []  
 worker_timestamps = {}  
 worker_lock = {}  
+available_worker_ids = set()  
 worker_id_counter = 1  
 
-def create_initial_workers():
-    # Cria os workers iniciais, com base no MIN_WORKERS.
+def get_next_worker_id():
+    # Obtém o próximo ID disponível para um novo worker
     global worker_id_counter
+    if available_worker_ids:
+        return available_worker_ids.pop()
+    worker_id_counter += 1
+    return worker_id_counter - 1  
+
+def create_initial_workers():
+    # Cria os workers iniciais com base no MIN_WORKERS
     for _ in range(MIN_WORKERS):
-        print(f"[Monitor] Criando worker inicial: {worker_id_counter}")
-        p = multiprocessing.Process(target=worker, args=(f"Worker{worker_id_counter}",))
+        worker_id = get_next_worker_id()
+        print(f"[Monitor] Criando worker inicial: {worker_id}")
+        p = multiprocessing.Process(target=worker, args=(f"Worker{worker_id}",))
         p.start()
-        workers.append(p)
+        workers.append((worker_id, p))
         worker_timestamps[p.pid] = time.time()
         worker_lock[p.pid] = False  
-        worker_id_counter += 1
     print(f"[Monitor] Workers iniciais criados. Total de workers: {len(workers)}")
 
 def manage_workers():
     # Gerencia dinamicamente os workers
-    global workers, worker_id_counter
+    global workers
 
     while True:
-        # Obtém o tamanho da fila 
         queue_size = get_queue_size()
         current_workers = len(workers)
 
         print(f"[Monitor] Tamanho da fila: {queue_size}, Workers ativos: {current_workers}")
 
-        # Se a fila estiver acima do limite, iniciar a escalabilidade dinâmica
-        if queue_size > QUEUE_THRESHOLD:
-            if current_workers < MAX_WORKERS:
-                # Cria um novo worker
-                print(f"[Monitor] Criando novo worker: {worker_id_counter}")
-                p = multiprocessing.Process(target=worker, args=(f"Worker{worker_id_counter}",))
-                p.start()
-                workers.append(p)
-                worker_timestamps[p.pid] = time.time()
-                worker_lock[p.pid] = False 
-                print(f"[Monitor] Novo worker criado. Total de workers: {len(workers)}")
-                worker_id_counter += 1
-            else:
-                print("[Monitor] Limite máximo de workers atingido.")
-        
-        # Se a fila estiver abaixo do limite, reduzir o número de workers
+        if queue_size > QUEUE_THRESHOLD and current_workers < MAX_WORKERS:
+            # Criando um novo worker
+            worker_id = get_next_worker_id()
+            print(f"[Monitor] Criando novo worker: {worker_id}")
+            p = multiprocessing.Process(target=worker, args=(f"Worker{worker_id}",))
+            p.start()
+            workers.append((worker_id, p))
+            worker_timestamps[p.pid] = time.time()
+            worker_lock[p.pid] = False 
+            print(f"[Monitor] Novo worker criado. Total de workers: {len(workers)}")
+
         elif queue_size < QUEUE_THRESHOLD and current_workers > MIN_WORKERS:
             now = time.time()
-            for p in workers:
+            for worker_id, p in workers:
                 if now - worker_timestamps[p.pid] > IDLE_TIMEOUT and not worker_lock[p.pid]:
-                    print(f"[Monitor] Encerrando worker ocioso: {p.pid}")
+                    print(f"[Monitor] Encerrando worker ocioso: {worker_id} (PID: {p.pid})")
                     worker_lock[p.pid] = True  
                     time.sleep(1) 
                     if now - worker_timestamps[p.pid] > IDLE_TIMEOUT:
                         p.terminate()  
-                        workers.remove(p)
+                        workers.remove((worker_id, p))
                         del worker_timestamps[p.pid]
                         del worker_lock[p.pid]
-                        print(f"[Monitor] Worker ocioso encerrado. Total de workers: {len(workers)}")
+                        available_worker_ids.add(worker_id)
+                        print(f"[Monitor] Worker {worker_id} encerrado. Total de workers: {len(workers)}")
                     else:
                         worker_lock[p.pid] = False
 
-        # Verifica a cada intervalo
         time.sleep(CHECK_INTERVAL)
