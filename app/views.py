@@ -1,34 +1,21 @@
+# views.py
+
 import os
+import uuid
 import json
 import pika
-import uuid
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+from threading import Thread
+from flask import request, jsonify, send_from_directory
+from config import UPLOAD_FOLDER, RABBITMQ_HOST, QUEUE_NAME, RESULT_QUEUE
 
-# Configurações
-UPLOAD_FOLDER = "Upload"
-RABBITMQ_HOST = "localhost"
-QUEUE_NAME = "image_queue"
+# Armazenamento dos resultados
+results = {}  
 
-# Cria a pasta de upload, se não existir
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Armazenamento dos resultados (em memória, para este exemplo)
-results = {}  # Estrutura: { filename: resultado_processado }
-
-# Configurar Flask
-app = Flask(__name__)
-CORS(app)
-
-# ----------------------
-# Rota para servir a interface web (index.html)
-@app.route("/")
+# Rota interface web
 def home():
-    return send_from_directory("static", "index.html")  # Busca na pasta "static/"
+    return send_from_directory("templates", "index.html")
 
-# ----------------------
 # Rota para receber o upload da imagem
-@app.route("/upload", methods=["POST"])
 def upload_file():
     if "file" not in request.files:
         return jsonify({"error": "Nenhum arquivo enviado"}), 400
@@ -52,7 +39,7 @@ def upload_file():
     })
 
     try:
-        # Abre e fecha conexão corretamente para evitar conexões quebradas
+        # Abre e fecha conexão 
         connection = pika.BlockingConnection(pika.ConnectionParameters(
             host=RABBITMQ_HOST, heartbeat=600, blocked_connection_timeout=300
         ))
@@ -66,9 +53,7 @@ def upload_file():
     # Retorna o nome único gerado ao cliente
     return jsonify({"message": "Arquivo enviado com sucesso", "filename": unique_filename}), 200
 
-# ----------------------
 # Rota callback para receber o resultado do processamento do worker
-@app.route("/result_callback", methods=["POST"])
 def result_callback():
     try:
         data = request.get_json()
@@ -84,9 +69,7 @@ def result_callback():
     except Exception as e:
         return jsonify({"error": f"Erro ao processar resultado: {str(e)}"}), 500
 
-# ----------------------
 # Rota para que o cliente obtenha o resultado do processamento
-@app.route("/get_result", methods=["GET"])
 def get_result():
     filename = request.args.get("filename")
     
@@ -95,12 +78,12 @@ def get_result():
 
     if filename in results:
         # Recupera o resultado
-        result = results.pop(filename)  # Remove do dicionário para liberar memória
+        result = results.pop(filename)  
 
         # Caminho completo da imagem
         image_path = os.path.join(UPLOAD_FOLDER, filename)
 
-        # Exclui a imagem do servidor após o cliente receber o resultado
+        # Exclui a imagem do servidor 
         if os.path.exists(image_path):
             os.remove(image_path)
             print(f"[Flask] Imagem {filename} excluída após cliente obter o resultado.")
@@ -109,6 +92,20 @@ def get_result():
     else:
         return jsonify({"message": "Processamento em andamento ou não encontrado."}), 202
 
+def consume_results():
+    connection = pika.BlockingConnection(pika.ConnectionParameters(host=RABBITMQ_HOST))
+    channel = connection.channel()
+    channel.queue_declare(queue=RESULT_QUEUE, durable=True)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    def callback(ch, method, properties, body):
+        data = json.loads(body)
+        filename = data["filename"]
+        result = data["result"]
+        results[filename] = result
+        print(f"[Flask] Resultado recebido e armazenado para {filename}")
+
+        ch.basic_ack(delivery_tag=method.delivery_tag) 
+
+    channel.basic_consume(queue=RESULT_QUEUE, on_message_callback=callback)
+    print("[Flask] Consumidor de resultados iniciado...")
+    channel.start_consuming()
